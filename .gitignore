@@ -1,0 +1,38 @@
+# Specific PowerShell Scripts
+UpdateScripts.ps1
+SimpleExcelUpdate.ps1
+
+# Excel Documents
+*.xlsx
+*.xls
+*.xlsm
+*.xlsb
+
+# Excel Temp Files
+~$*.xlsx
+~$*.xls
+~$*.xlsm
+
+# Text Output Files
+*.txt
+*.csv
+
+# PowerShell Module Files
+*.psm1
+*.psd1
+
+# Other Office Documents (optional)
+*.docx
+*.doc
+*.pptx
+*.ppt
+
+# Windows Temp Files
+Thumbs.db
+Desktop.ini
+
+# VS Code Settings (optional)
+.vscode/
+
+# PowerShell History
+ConsoleHost_history.txt
