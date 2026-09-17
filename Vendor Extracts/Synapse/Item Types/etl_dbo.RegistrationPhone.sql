@@ -13,38 +13,63 @@ WITH (
     FILE_FORMAT = ParquetFileFormat
 )
 AS 
-WITH registration_base AS (
-    SELECT
-        pa.[PatientID] AS [ExternalDataId],
-        '1' AS [ExternalDataVersion],
-        pd.[HPHONE],
-        pd.[CPHONE],
-        pd.[WPHONE]
-    FROM GEMMSCV.[files].[PATIENTACCOUNT] pa
-    LEFT JOIN GEMMSCV.[files].[PATIENTDEMOGRAPHICS] pd
-        ON pd.[PatientID] = pa.[PatientID]
-)
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    1 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
-    CONCAT(rb.[ExternalDataId], '|PHONE|', UPPER(ph.[PhoneType])) AS [ExternalDataId],
-    rb.[ExternalDataId] AS [ItemExternalDataId],
-    rb.[ExternalDataVersion] AS [ItemExternalDataVersion],
-    ph.[PhoneNumber] AS [Number],
-    ph.[PhoneType] AS [Type],
-    ph.[IsPrimary] AS [IsPrimary],
+    CONCAT(pa.[PatientId], '|CELLPHONE|') AS [ExternalDataId],
+    pa.[PatientID] AS [ItemExternalDataId],
+    '1' AS [ItemExternalDataVersion],
+    pd.[CPhone] AS [Number],
+    'Cell' AS [Type],
+    1 AS [IsPrimary],
     NULL AS [ExtendedProperties]
-FROM registration_base rb
-CROSS APPLY (
-    VALUES
-        ('Home', rb.[HPHONE], CASE WHEN NULLIF(rb.[HPHONE], '') IS NOT NULL THEN 1 ELSE 0 END),
-        ('Cell', rb.[CPHONE], CASE WHEN NULLIF(rb.[HPHONE], '') IS NULL AND NULLIF(rb.[CPHONE], '') IS NOT NULL THEN 1 ELSE 0 END),
-        ('Work', rb.[WPHONE], CASE WHEN NULLIF(rb.[HPHONE], '') IS NULL AND NULLIF(rb.[CPHONE], '') IS NULL AND NULLIF(rb.[WPHONE], '') IS NOT NULL THEN 1 ELSE 0 END)
-) ph([PhoneType], [PhoneNumber], [IsPrimary])
+-- SELECT TOP(100)*
+FROM GEMMSCV.[files].[PATIENTACCOUNT] pa
+LEFT JOIN GEMMSCV.[files].[PATIENTDEMOGRAPHICS] pd
+    ON pd.[PatientID] = pa.[PatientID]
 WHERE 1 = 1
---Functional
-AND NULLIF(LTRIM(RTRIM(COALESCE(ph.[PhoneNumber], ''))), '') IS NOT NULL
+AND NULLIF(pd.[CPHONE], '') IS NOT NULL
+
+UNION
+
+SELECT
+    NEWID() AS [Id],
+    1 AS [ItemSetId],
+    'CHIGEMMS1CV' AS [DataSourceCode],
+    CONCAT(pa.[PatientId], '|HOMEPHONE|') AS [ExternalDataId],
+    pa.[PatientID] AS [ItemExternalDataId],
+    '1' AS [ItemExternalDataVersion],
+    pd.[HPhone] AS [Number],
+    'Home' AS [Type],
+    1 AS [IsPrimary],
+    NULL AS [ExtendedProperties]
+-- SELECT TOP(100)*
+FROM GEMMSCV.[files].[PATIENTACCOUNT] pa
+LEFT JOIN GEMMSCV.[files].[PATIENTDEMOGRAPHICS] pd
+    ON pd.[PatientID] = pa.[PatientID]
+WHERE 1 = 1
+AND NULLIF(pd.[HPHONE], '') IS NOT NULL
+
+UNION
+
+SELECT
+    NEWID() AS [Id],
+    1 AS [ItemSetId],
+    'CHIGEMMS1CV' AS [DataSourceCode],
+    CONCAT(pa.[PatientId], '|WORKPHONE|') AS [ExternalDataId],
+    pa.[PatientID] AS [ItemExternalDataId],
+    '1' AS [ItemExternalDataVersion],
+    pd.[WPhone] AS [Number],
+    'Work' AS [Type],
+    1 AS [IsPrimary],
+    NULL AS [ExtendedProperties]
+-- SELECT TOP(100)*
+FROM GEMMSCV.[files].[PATIENTACCOUNT] pa
+LEFT JOIN GEMMSCV.[files].[PATIENTDEMOGRAPHICS] pd
+    ON pd.[PatientID] = pa.[PatientID]
+WHERE 1 = 1
+AND NULLIF(pd.[WPHONE], '') IS NOT NULL
 
 --Site specific
 

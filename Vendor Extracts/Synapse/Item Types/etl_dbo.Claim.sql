@@ -1,7 +1,7 @@
 /********************************************************************************
-SCRIPT DEPENDENCIES: GEMMSCV.files.PATIENTACCOUNT, GEMMSCV.files.PATIENTDEMOGRAPHICS, GEMMSCV.files.GUARANTOR, GEMMSCV.files.CLAIM, GEMMSCV.files.CLAIMINSURANCE
+SCRIPT DEPENDENCIES: 
 ITEM TYPE: Claim
-NOTES: Claim header reconstruction from CLAIM, linked to Account by PatientID with patient and guarantor enrichment.
+NOTES: There are duplicate rows in the data, check to see in the front end if those claims are listed twice
 SCALE:
 ********************************************************************************/
  
@@ -13,14 +13,6 @@ WITH (
     FILE_FORMAT = ParquetFileFormat
 )
 AS 
-WITH claim_insurance AS (
-    SELECT
-        ci.[PatientID],
-        ci.[INCIDENTNO],
-        STRING_AGG(CONCAT(COALESCE(ci.[INUM], ''), ':', COALESCE(ci.[INSCODE], '')), '|') AS [InsuranceLines]
-    FROM GEMMSCV.[files].[CLAIMINSURANCE] ci
-    GROUP BY ci.[PatientID], ci.[INCIDENTNO]
-)
 SELECT
     NEWID() AS [Id],
     NULL AS [ItemSetId],
@@ -371,6 +363,7 @@ SELECT
     NULL AS [ResNucc2NubcRemarksB],
     NULL AS [ResNucc3NubcRemarksC],
     NULL AS [ResNucc4NubcRemarksD]
+-- SELECT TOP(100)*
 FROM GEMMSCV.[files].[CLAIM] cl
 INNER JOIN GEMMSCV.[files].[PATIENTACCOUNT] pa
     ON pa.[PatientID] = cl.[PatientID]
@@ -378,9 +371,6 @@ LEFT JOIN GEMMSCV.[files].[PATIENTDEMOGRAPHICS] pd
     ON pd.[PatientID] = cl.[PatientID]
 LEFT JOIN GEMMSCV.[files].[GUARANTOR] g
     ON g.[PatientID] = cl.[PatientID]
-LEFT JOIN claim_insurance ci
-    ON ci.[PatientID] = cl.[PatientID]
-   AND ci.[INCIDENTNO] = cl.[INCIDENTNO]
 WHERE 1 = 1
 --Functional
 

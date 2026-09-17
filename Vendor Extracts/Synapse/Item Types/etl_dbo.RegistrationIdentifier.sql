@@ -13,62 +13,21 @@ WITH (
     FILE_FORMAT = ParquetFileFormat
 )
 AS 
-WITH registration_base AS (
-    SELECT
-        pa.[PatientID] AS [ExternalDataId],
-        '1' AS [ExternalDataVersion],
-        pa.[ACCOUNT],
-        pa.[MRN]
-    FROM GEMMSCV.[files].[PATIENTACCOUNT] pa
-), identifier_rows AS (
-    SELECT
-        rb.[ExternalDataId],
-        rb.[ExternalDataVersion],
-        'PATIENTID' AS [Code],
-        'Legacy Patient Id' AS [Name],
-        rb.[ExternalDataId] AS [Value],
-        0 AS [IsDefault]
-    FROM registration_base rb
-
-    UNION ALL
-
-    SELECT
-        rb.[ExternalDataId],
-        rb.[ExternalDataVersion],
-        'ACCOUNT' AS [Code],
-        'Chart Number' AS [Name],
-        rb.[ACCOUNT] AS [Value],
-        0 AS [IsDefault]
-    FROM registration_base rb
-    WHERE NULLIF(LTRIM(RTRIM(COALESCE(rb.[ACCOUNT], ''))), '') IS NOT NULL
-
-    UNION ALL
-
-    SELECT
-        rb.[ExternalDataId],
-        rb.[ExternalDataVersion],
-        'MRN' AS [Code],
-        'Medical Record Number' AS [Name],
-        rb.[MRN] AS [Value],
-        1 AS [IsDefault]
-    FROM registration_base rb
-    WHERE NULLIF(LTRIM(RTRIM(COALESCE(rb.[MRN], ''))), '') IS NOT NULL
-)
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    1 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
-    CONCAT(ir.[ExternalDataId], '|IDENT|', ir.[Code]) AS [ExternalDataId],
-    ir.[ExternalDataId] AS [ItemExternalDataId],
-    ir.[ExternalDataVersion] AS [ItemExternalDataVersion],
-    ir.[Code] AS [Code],
-    ir.[Name] AS [Name],
-    ir.[Value] AS [Value],
-    ir.[IsDefault] AS [IsDefault],
+    CONCAT('Mrn_', CAST(pa.PatientID AS varchar(100))) AS [ExternalDataId],
+    CAST(pa.PatientID AS varchar(100)) AS [ItemExternalDataId],
+    '1' AS [ItemExternalDataVersion],
+    'MRN' AS [Code],
+    'MRN' AS [Name],
+    CAST(pa.MRN AS varchar(100)) AS [Value],
+    CAST(1 AS bit) AS [IsDefault],
     NULL AS [ExtendedProperties]
-FROM identifier_rows ir
+FROM files.patientaccount AS pa
 WHERE 1 = 1
---Functional
+AND NULLIF(LTRIM(RTRIM(COALESCE(pa.[MRN], ''))), '') IS NOT NULL
 
 --Site specific
 

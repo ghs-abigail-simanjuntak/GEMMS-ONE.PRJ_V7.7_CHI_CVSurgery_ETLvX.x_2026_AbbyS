@@ -1,5 +1,5 @@
 /********************************************************************************
-SCRIPT DEPENDENCIES: GEMMSCV.files.PATIENTACCOUNT, GEMMSCV.files.PATIENTDEMOGRAPHICS, GEMMSCV.files.GUARANTOR
+SCRIPT DEPENDENCIES:
 ITEM TYPE: RegistrationContact
 NOTES: Child registration contact rows include emergency contact and guarantor contact evidence.
 SCALE:
@@ -13,48 +13,25 @@ WITH (
     FILE_FORMAT = ParquetFileFormat
 )
 AS 
-WITH registration_base AS (
-    SELECT
-        pa.[PatientID] AS [ExternalDataId],
-        '1' AS [ExternalDataVersion],
-        pd.[EMERGENCYCONTACT],
-        pd.[EMERGENCYPHONE]
-    FROM GEMMSCV.[files].[PATIENTACCOUNT] pa
-    LEFT JOIN GEMMSCV.[files].[PATIENTDEMOGRAPHICS] pd
-        ON pd.[PatientID] = pa.[PatientID]
-), guarantor_base AS (
-    SELECT
-        pa.[PatientID] AS [ExternalDataId],
-        '1' AS [ExternalDataVersion],
-        g.[GLNAME],
-        g.[GFNAME],
-        g.[GMNAME],
-        g.[GSSN],
-        g.[ADDRESS],
-        g.[CITY],
-        g.[STATE],
-        g.[ZIP],
-        g.[PHONE]
-    FROM GEMMSCV.[files].[PATIENTACCOUNT] pa
-    INNER JOIN GEMMSCV.[files].[GUARANTOR] g
-        ON g.[PatientID] = pa.[PatientID]
-)
 SELECT
     NEWID() AS [Id],
     NULL AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
-    CONCAT(rb.[ExternalDataId], '|CONTACT|EMERGENCY') AS [ExternalDataId],
-    rb.[ExternalDataId] AS [ItemExternalDataId],
-    rb.[ExternalDataVersion] AS [ItemExternalDataVersion],
-    NULL AS [PersonExternalDataId],
+    CONCAT(pa.[PatientID], '|CONTACT|EMERGENCY') AS [ExternalDataId],
+    pa.[PatientID] AS [ItemExternalDataId],
+    '1' AS [ItemExternalDataVersion],
+    CONCAT('EMERGENCY|', pa.[PatientID], '|', COALESCE(pd.[EMERGENCYCONTACT], '')) AS [PersonExternalDataId],
     'Emergency' AS [Type],
     NULL AS [ExtendedProperties]
-FROM registration_base rb
+-- SELECT TOP(100)*
+FROM [files].[PATIENTACCOUNT] pa
+LEFT JOIN [files].[PATIENTDEMOGRAPHICS] pd
+     ON pd.[PatientID] = pa.[PatientID]
 WHERE 1 = 1
 --Functional
 AND (
-    NULLIF(LTRIM(RTRIM(COALESCE(rb.[EMERGENCYCONTACT], ''))), '') IS NOT NULL
-    OR NULLIF(LTRIM(RTRIM(COALESCE(rb.[EMERGENCYPHONE], ''))), '') IS NOT NULL
+    NULLIF(LTRIM(RTRIM(COALESCE(pd.[EMERGENCYCONTACT], ''))), '') IS NOT NULL
+    OR NULLIF(LTRIM(RTRIM(COALESCE(pd.[EMERGENCYPHONE], ''))), '') IS NOT NULL
 )
 
 UNION ALL
@@ -63,19 +40,22 @@ SELECT
     NEWID() AS [Id],
     NULL AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
-    CONCAT(gb.[ExternalDataId], '|CONTACT|GUARANTOR') AS [ExternalDataId],
-    gb.[ExternalDataId] AS [ItemExternalDataId],
-    gb.[ExternalDataVersion] AS [ItemExternalDataVersion],
-    CONCAT('GUAR|', gb.[ExternalDataId], '|', COALESCE(gb.[GLNAME], ''), '|', COALESCE(gb.[GFNAME], '')) AS [PersonExternalDataId],
+    CONCAT(pa.[PatientID], '|CONTACT|GUARANTOR') AS [ExternalDataId],
+    pa.[PatientID] AS [ItemExternalDataId],
+    '1' AS [ItemExternalDataVersion],
+    CONCAT('GUAR|', pa.[PatientID], '|', COALESCE(g.[GLNAME], ''), '|', COALESCE(g.[GFNAME], '')) AS [PersonExternalDataId],
     'Guarantor' AS [Type],
     NULL AS [ExtendedProperties]
-FROM guarantor_base gb
+-- SELECT TOP(100)*
+FROM [files].[PATIENTACCOUNT] pa
+INNER JOIN [files].[GUARANTOR] g
+    ON g.[PatientID] = pa.[PatientID]
 WHERE 1 = 1
 --Functional
 AND (
-    NULLIF(LTRIM(RTRIM(COALESCE(gb.[GLNAME], ''))), '') IS NOT NULL
-    OR NULLIF(LTRIM(RTRIM(COALESCE(gb.[GFNAME], ''))), '') IS NOT NULL
-    OR NULLIF(LTRIM(RTRIM(COALESCE(gb.[PHONE], ''))), '') IS NOT NULL
+    NULLIF(LTRIM(RTRIM(COALESCE(g.[GLNAME], ''))), '') IS NOT NULL
+    OR NULLIF(LTRIM(RTRIM(COALESCE(g.[GFNAME], ''))), '') IS NOT NULL
+    OR NULLIF(LTRIM(RTRIM(COALESCE(g.[GMNAME], ''))), '') IS NOT NULL
 )
 
 --Site specific

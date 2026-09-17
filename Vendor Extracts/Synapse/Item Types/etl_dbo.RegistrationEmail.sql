@@ -13,29 +13,22 @@ WITH (
     FILE_FORMAT = ParquetFileFormat
 )
 AS 
-WITH registration_base AS (
-    SELECT
-        pa.[PatientID] AS [ExternalDataId],
-        '1' AS [ExternalDataVersion],
-        pd.[EMAIL]
-    FROM GEMMSCV.[files].[PATIENTACCOUNT] pa
-    LEFT JOIN GEMMSCV.[files].[PATIENTDEMOGRAPHICS] pd
-        ON pd.[PatientID] = pa.[PatientID]
-)
 SELECT
     NEWID() AS [Id],
     NULL AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
-    CONCAT(rb.[ExternalDataId], '|EMAIL|PRIMARY') AS [ExternalDataId],
-    rb.[ExternalDataId] AS [ItemExternalDataId],
-    rb.[ExternalDataVersion] AS [ItemExternalDataVersion],
-    rb.[EMAIL] AS [Address],
+    CONCAT(pa.[PatientID], '|EMAIL|PRIMARY') AS [ExternalDataId],
+    pa.[PatientID] AS [ItemExternalDataId],
+    '1' AS [ItemExternalDataVersion],
+    pd.[EMAIL] AS [Address],
     1 AS [IsPrimary],
     NULL AS [ExtendedProperties]
-FROM registration_base rb
+FROM [files].[PATIENTACCOUNT] pa
+LEFT JOIN [files].[PATIENTDEMOGRAPHICS] pd
+    ON pd.[PatientID] = pa.[PatientID]
 WHERE 1 = 1
 --Functional
-AND NULLIF(LTRIM(RTRIM(COALESCE(rb.[EMAIL], ''))), '') IS NOT NULL
+AND NULLIF(LTRIM(RTRIM(COALESCE(pd.[EMAIL], ''))), '') IS NOT NULL
 
 --Site specific
 

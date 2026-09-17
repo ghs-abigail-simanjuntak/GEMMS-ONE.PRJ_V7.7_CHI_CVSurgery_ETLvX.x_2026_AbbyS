@@ -1,5 +1,5 @@
 /********************************************************************************
-SCRIPT DEPENDENCIES: GEMMSCV.files.PATIENTACCOUNT, GEMMSCV.files.PATIENTDEMOGRAPHICS
+SCRIPT DEPENDENCIES:
 ITEM TYPE: RegistrationAddress
 NOTES: Child registration address rows linked to Registration by PatientID and version 1.
 SCALE:
@@ -13,37 +13,28 @@ WITH (
     FILE_FORMAT = ParquetFileFormat
 )
 AS 
-WITH registration_base AS (
-    SELECT
-        pa.[PatientID] AS [ExternalDataId],
-        '1' AS [ExternalDataVersion],
-        pd.[ADDRESS],
-        pd.[CITY],
-        pd.[STATE],
-        pd.[ZIP]
-    FROM GEMMSCV.[files].[PATIENTACCOUNT] pa
-    LEFT JOIN GEMMSCV.[files].[PATIENTDEMOGRAPHICS] pd
-        ON pd.[PatientID] = pa.[PatientID]
-)
 SELECT
     NEWID() AS [Id],
     NULL AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
-    CONCAT(rb.[ExternalDataId], '|ADDRESS|PRIMARY') AS [ExternalDataId],
-    rb.[ExternalDataId] AS [ItemExternalDataId],
-    rb.[ExternalDataVersion] AS [ItemExternalDataVersion],
-    rb.[ADDRESS] AS [AddressLine1],
+    CONCAT('address_',pa.[PatientID]) AS [ExternalDataId],
+    pa.[PatientID] AS [ItemExternalDataId],
+    '1'  AS [ItemExternalDataVersion],
+    pd.[ADDRESS] AS [AddressLine1],
     NULL AS [AddressLine2],
-    rb.[ZIP] AS [PostalCode],
-    rb.[CITY] AS [City],
-    rb.[STATE] AS [StateCode],
+    pd.[ZIP] AS [PostalCode],
+    pd.[CITY] AS [City],
+    pd.[STATE] AS [StateCode],
     'US' AS [CountryCode],
     1 AS [IsPrimary],
     NULL AS [ExtendedProperties]
-FROM registration_base rb
+-- SELECT TOP(100)*
+FROM [files].[PATIENTACCOUNT] pa
+LEFT JOIN [files].[PATIENTDEMOGRAPHICS] pd
+     ON pd.[PatientID] = pa.[PatientID]
 WHERE 1 = 1
 --Functional
-AND NULLIF(LTRIM(RTRIM(COALESCE(rb.[ADDRESS], ''))), '') IS NOT NULL
+AND NULLIF(LTRIM(RTRIM(COALESCE(pd.[ADDRESS], ''))), '') IS NOT NULL
 
 --Site specific
 

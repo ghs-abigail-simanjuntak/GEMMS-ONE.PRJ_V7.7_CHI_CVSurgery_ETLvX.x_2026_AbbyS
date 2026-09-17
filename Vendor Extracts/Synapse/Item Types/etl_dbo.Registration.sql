@@ -1,11 +1,11 @@
 /********************************************************************************
-SCRIPT DEPENDENCIES: GEMMSCV.files.PATIENTACCOUNT, GEMMSCV.files.PATIENTDEMOGRAPHICS
+SCRIPT DEPENDENCIES: 
 ITEM TYPE: Registration
 NOTES: Parent registration item sourced from PATIENTACCOUNT with PATIENTDEMOGRAPHICS enrichment.
-SCALE:
+SCALE:      
 ********************************************************************************/
  
- -- DROP EXTERNAL TABLE etl_dbo.Registration
+-- DROP EXTERNAL TABLE etl_dbo.Registration
 CREATE EXTERNAL TABLE etl_dbo.Registration
 WITH (
     LOCATION = 'etl_dbo/Registration',
@@ -21,7 +21,7 @@ SELECT
     '1' AS [ExternalDataVersion],
     1 AS [DisplayOrder],
     pa.[PatientID] AS [PatientExternalDataId],
-    NULLIF(pd.[LASTVISIT], '') AS [ClinicallyRelevantDttm],
+    NULLIF(pa.[DOB], '') AS [ClinicallyRelevantDttm],
     0 AS [IsInvalidated],
     NULL AS [InvalidatedDttm],
     NULL AS [InvalidatedByProviderExternalDataId],
@@ -34,7 +34,22 @@ SELECT
     NULL AS [Title],
     0 AS [IsSecure],
     NULL AS [VcoSetEntries],
-    NULL AS [ExtendedProperties],
+    CONVERT(VARCHAR(8000),
+        CONCAT(
+            '{',
+            '"patientAccountNumber":"', STRING_ESCAPE(COALESCE(CONVERT(VARCHAR(100), pa.ACCOUNT), ''), 'json'), '",',
+            '"nickname":"', STRING_ESCAPE(COALESCE(CONVERT(VARCHAR(100), pd.NICKNAME), ''), 'json'), '",',
+            '"salutation":"', STRING_ESCAPE(COALESCE(CONVERT(VARCHAR(100), pd.SALUTATION), ''), 'json'), '",',
+            '"patientType":"', STRING_ESCAPE(COALESCE(CONVERT(VARCHAR(100), pd.PTYPE), ''), 'json'), '",',
+            '"feeType":"', STRING_ESCAPE(COALESCE(CONVERT(VARCHAR(100), pd.FEETYPE), ''), 'json'), '",',
+            '"birthTime":"', STRING_ESCAPE(COALESCE(CONVERT(VARCHAR(50), pd.BIRTHTIME), ''), 'json'), '",',
+            '"emergencyContact":"', STRING_ESCAPE(COALESCE(CONVERT(VARCHAR(255), pd.EMERGENCYCONTACT), ''), 'json'), '",',
+            '"emergencyPhone":"', STRING_ESCAPE(COALESCE(CONVERT(VARCHAR(50), pd.EMERGENCYPHONE), ''), 'json'), '",',
+            '"dateOfDeath":"', STRING_ESCAPE(COALESCE(CONVERT(VARCHAR(23), TRY_CAST(pd.DECEASED AS datetime2), 121), ''), 'json'), '",',
+            '"causeOfDeath":"', STRING_ESCAPE(COALESCE(CONVERT(VARCHAR(2000), pd.DEATHREASON), ''), 'json'), '"',
+            '}'
+        )
+    ) AS [ExtendedProperties],
     NULL AS [ServiceDttm],
     NULLIF(pd.[LASTVISIT], '') AS [RecordedDttm],
     pa.[MRN] AS [MedicalRecordNumber],
@@ -59,7 +74,7 @@ SELECT
         WHEN 'M' THEN 'Married'
         WHEN 'S' THEN 'Single'
         WHEN 'D' THEN 'Divorced'
-        WHEN 'L' THEN 'Legally Separated'
+        WHEN 'X' THEN 'Separated'
         WHEN 'W' THEN 'Widowed'
         WHEN 'U' THEN 'Unknown'
         ELSE pd.[MARITAL]
