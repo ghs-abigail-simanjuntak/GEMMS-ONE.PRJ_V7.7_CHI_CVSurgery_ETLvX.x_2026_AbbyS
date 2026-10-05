@@ -15,7 +15,7 @@ WITH (
 AS 
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    1 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
     CONCAT(sr.[PatientID], '|STMT|', COALESCE(sr.[RUNDATE], ''),sr.CHGID) AS [ExternalDataId],
     '1' AS [ExternalDataVersion],

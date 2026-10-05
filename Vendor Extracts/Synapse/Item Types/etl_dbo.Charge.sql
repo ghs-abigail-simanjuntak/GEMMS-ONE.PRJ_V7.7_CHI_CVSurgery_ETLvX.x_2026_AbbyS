@@ -15,7 +15,7 @@ WITH (
 AS 
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    1 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
     CONCAT(ch.[PatientID], '|CHG|', COALESCE(ch.[CHGID], '')) AS [ExternalDataId],
     '1' AS [ExternalDataVersion],
@@ -61,7 +61,9 @@ SELECT
     ch.[CPTPRINT] AS [Hcpcs]
 -- SELECT COUNT(*)
 -- SELECT TOP(100)*
-FROM [files].[CHARGE] ch
+FROM (
+    SELECT DISTINCT * FROM [files].[CHARGE]
+) ch
 INNER JOIN [files].[PATIENTACCOUNT] pa
     ON pa.[PatientID] = ch.[PatientID]
 WHERE 1 = 1

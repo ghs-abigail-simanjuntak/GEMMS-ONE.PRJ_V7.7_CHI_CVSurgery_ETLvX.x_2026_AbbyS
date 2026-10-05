@@ -33,4 +33,4 @@ SELECT
 	CONVERT(nvarchar(2),[CountryCode]) AS [CountryCode],
 	CONVERT(bit,[IsPrimary]) AS [IsPrimary]
 
-FROM [etl_dbo].[PersonAddress]
+FROM etl_dbo.[personaddress]

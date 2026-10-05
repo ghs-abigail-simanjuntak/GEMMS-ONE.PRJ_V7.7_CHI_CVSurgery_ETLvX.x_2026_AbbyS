@@ -45,6 +45,7 @@ IF NOT EXISTS ( SELECT * FROM SYS.SCHEMAS WHERE NAME = 'etl_customer')
 	EXEC('CREATE SCHEMA [etl_customer]')
 
 --DROP EXTERNAL TABLE [etl_customer].[PatientIdentifier]
+-- SELECT COUNT(*) FROM [etl_customer].[PatientIdentifier]
 CREATE EXTERNAL TABLE [etl_customer].[PatientIdentifier]
 WITH (
 		LOCATION = 'etl_customer/PatientIdentifier',

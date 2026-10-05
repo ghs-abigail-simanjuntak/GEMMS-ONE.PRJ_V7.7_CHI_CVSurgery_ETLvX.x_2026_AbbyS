@@ -15,15 +15,15 @@ WITH (
 AS 
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    1 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
     CONCAT(p.[PatientID], '|TX|', COALESCE(p.[PAYID], ''), '|', COALESCE(p.[CHGID], '')) AS [ExternalDataId],
     '1' AS [ExternalDataVersion],
     1 AS [DisplayOrder],
     p.[PatientID] AS [PatientExternalDataId],
     COALESCE(NULLIF(p.[PAYDATE], ''), NULLIF(p.[XACDATE], '')) AS [ClinicallyRelevantDttm],
-    COALESCE(NULLIF(pc.[PAYFLAG], ''), NULLIF(p.[DC], ''), NULLIF(p.[PAYORCODE], ''), 'Transaction') AS [TypeCode],
-    COALESCE(NULLIF(pc.[PAYDESC], ''), NULLIF(p.[PAYORCODE], ''), 'Transaction') AS [TypeName],
+    'Payment' AS [TypeCode],
+    'Payment' AS [TypeName],
     CASE WHEN p.[STATUS] = 'N' THEN 1 ELSE 0 END AS [IsInvalidated],
     CASE WHEN p.[STATUS] = 'N' THEN COALESCE(NULLIF(p.[PAYDATE], ''), NULLIF(p.[ENTRYDATE], '')) ELSE NULL END AS [InvalidatedDttm],
     NULL AS [InvalidatedByProviderExternalDataId],
@@ -43,10 +43,10 @@ SELECT
     CONCAT('account_',pa.[PatientID]) AS [AccountExternalDataId],
     p.[PAYID] AS [TransactionNumber],
     COALESCE(NULLIF(pc.[PAYDESC], ''), NULLIF(p.[PAYORCODE], ''), 'Transaction') AS [Description],
-    CASE WHEN pc.[PAYFLAG] IN ('G', 'O', 'P') THEN CONCAT('PAYOR|', p.[PAYORCODE]) ELSE NULL END AS [PaidByExternalDataId],
-    CASE WHEN pc.[PAYFLAG] IN ('1', '2', '3', '4', '5', '6', 'W', 'C') THEN CONCAT('PAYOR|', p.[PAYORCODE]) ELSE NULL END AS [PaidByInsuranceExternalDataId],
-    NULLIF(p.[USERCODE], '') AS [EnteredByExternalDataId],
-    NULLIF(p.[USERCODE], '') AS [LastUpdatedByExternalDataId],
+    CASE WHEN pc.[PAYFLAG] IN ('G', 'O', 'P') AND p.[PAYORCODE] IS NOT NULL THEN CONCAT('PAYOR|', p.[PAYORCODE]) ELSE NULL END AS [PaidByExternalDataId],
+    CASE WHEN pc.[PAYFLAG] IN ('1', '2', '3', '4', '5', '6', 'W', 'C') AND i.[PatientId] IS NOT NULL THEN CONCAT(i.[PatientID], '|', COALESCE(i.[INUM], ''), '|', COALESCE(i.[INSCODE], ''), '|', COALESCE(i.[POLICYNO], '')) ELSE NULL END AS [PaidByInsuranceExternalDataId],
+    NULLIF(CONCAT('USER|',p.[USERCODE], ''), '') AS [EnteredByExternalDataId],
+    NULLIF(CONCAT('USER|',p.[USERCODE], ''), '') AS [LastUpdatedByExternalDataId],
     NULLIF(p.[PAYDATE], '') AS [TransactionDttm],
     NULLIF(p.[ENTRYDATE], '') AS [EnteredDttm],
     NULLIF(p.[ENTRYDATE], '') AS [LastUpdatedDttm],
@@ -70,23 +70,33 @@ SELECT
     NULL AS [EncounterExternalDataId],
     NULL AS [VisitExternalDataId],
     CASE
-        WHEN NULLIF(ch.[CLAIMID], '') IS NOT NULL THEN CONCAT(ch.[PatientID], '|CLAIM|', COALESCE(ch.[INCIDENTNO], ''), '|', COALESCE(ch.[CLAIMID], ''))
+        WHEN cl.[INCIDENTNO] IS NOT NULL THEN CONCAT(cl.[PatientID], '|CLAIM|', COALESCE(NULLIF(cl.[INCIDENTNO], ''), ''), '|', COALESCE(NULLIF(cl.[CLAIMID], ''), ''))
         ELSE NULL
     END AS [ClaimExternalDataId],
     CONCAT(p.[PatientID], '|CHG|', COALESCE(p.[CHGID], '')) AS [ChargeExternalDataId]
--- SELECT TOP(100)*
-FROM GEMMSCV.[files].[PAYMENT] p
-INNER JOIN GEMMSCV.[files].[PATIENTACCOUNT] pa
+-- SELECT COUNT(*)
+FROM [files].[PAYMENT] p
+INNER JOIN [files].[PATIENTACCOUNT] pa
     ON pa.[PatientID] = p.[PatientID]
-LEFT JOIN GEMMSCV.[files].[PAYORCODE] pc
+LEFT JOIN [files].[PAYORCODE] pc
     ON pc.[PAYORCODE] = p.[PAYORCODE]
-LEFT JOIN GEMMSCV.[files].[CHARGE] ch
+LEFT JOIN [files].[INSURANCE] i
+    ON i.[patientid] = p.[patientid]
+    AND p.[inscode] = i.[inscode] 
+    AND i.inum = '1'
+LEFT JOIN [files].[CHARGE] ch
     ON ch.[PatientID] = p.[PatientID]
-   AND ch.[CHGID] = p.[CHGID]
-LEFT JOIN GEMMSCV.[files].[CHECK] ck
+    AND ch.[CHGID] = p.[CHGID]
+LEFT JOIN [files].[CHECK] ck
     ON ck.[PatientID] = p.[PatientID]
-   AND ck.[CHECKID] = p.[CHECKID]
+    AND ck.[CHECKID] = p.[CHECKID]
+LEFT JOIN (
+    SELECT DISTINCT * FROM [files].[CLAIM]
+) cl
+    ON cl.[PatientID] = ch.[PatientID]
+    AND cl.[INCIDENTNO] = ch.[INCIDENTNO]
 WHERE 1 = 1
+AND ch.chgid IS NOT NULL
 --Functional
 
 --Site specific
@@ -96,15 +106,15 @@ UNION
 
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    2 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
     CONCAT(ch.[PatientID], '|TX|CHG|', COALESCE(ch.[CHGID], '')) AS [ExternalDataId],
     '1' AS [ExternalDataVersion],
     1 AS [DisplayOrder],
     ch.[PatientID] AS [PatientExternalDataId],
     COALESCE(NULLIF(ch.[XACDATE], ''), NULLIF(ch.[BILLDATE], '')) AS [ClinicallyRelevantDttm],
-    ch.[PTYPE] AS [TypeCode],
-    ch.[FEETYPE] AS [TypeName],
+    'Charge' AS [TypeCode],
+    'Charge' AS [TypeName],
     CASE WHEN ch.[STATUS] = 'N' THEN 1 ELSE 0 END AS [IsInvalidated],
     CASE WHEN ch.[STATUS] = 'N' THEN COALESCE(NULLIF(ch.[DENYDATE], ''), NULLIF(ch.[BILLDATE2], '')) ELSE NULL END AS [InvalidatedDttm],
     NULL AS [InvalidatedByProviderExternalDataId],
@@ -137,12 +147,18 @@ SELECT
     NULL AS [EncounterExternalDataId],
     NULL AS [VisitExternalDataId],
     CASE
-        WHEN NULLIF(ch.[CLAIMID], '') IS NOT NULL THEN CONCAT(ch.[PatientID], '|CLAIM|', COALESCE(ch.[INCIDENTNO], ''), '|', COALESCE(ch.[CLAIMID], ''))
+        WHEN cl.[INCIDENTNO] IS NOT NULL THEN CONCAT(cl.[PatientID], '|CLAIM|', COALESCE(NULLIF(cl.[INCIDENTNO], ''), ''), '|', COALESCE(NULLIF(cl.[CLAIMID], ''), ''))
         ELSE NULL
     END AS [ClaimExternalDataId],
     CONCAT(ch.[PatientID], '|CHG|', COALESCE(ch.[CHGID], '')) AS [ChargeExternalDataId]
 -- SELECT COUNT(*)
-FROM GEMMSCV.[files].[CHARGE] ch
-INNER JOIN GEMMSCV.[files].[PATIENTACCOUNT] pa
+FROM [files].[CHARGE] ch
+INNER JOIN [files].[PATIENTACCOUNT] pa
     ON pa.[PatientID] = ch.[PatientID]
+LEFT JOIN (
+    SELECT DISTINCT * FROM [files].[CLAIM]
+) cl
+    ON cl.[PatientID] = ch.[PatientID]
+    AND cl.[INCIDENTNO] = ch.[INCIDENTNO]
 WHERE 1 = 1
+AND cl.[PatientID] IS NOT NULL

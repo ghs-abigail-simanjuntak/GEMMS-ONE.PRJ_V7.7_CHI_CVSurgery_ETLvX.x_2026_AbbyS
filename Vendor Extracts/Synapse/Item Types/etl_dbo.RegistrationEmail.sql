@@ -15,7 +15,7 @@ WITH (
 AS 
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    1 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
     CONCAT(pa.[PatientID], '|EMAIL|PRIMARY') AS [ExternalDataId],
     pa.[PatientID] AS [ItemExternalDataId],

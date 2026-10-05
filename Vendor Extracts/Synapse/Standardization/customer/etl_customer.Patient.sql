@@ -10,6 +10,7 @@ IF NOT EXISTS ( SELECT * FROM SYS.SCHEMAS WHERE NAME = 'etl_customer')
 	EXEC('CREATE SCHEMA [etl_customer]')
 
 --DROP EXTERNAL TABLE [etl_customer].[Patient]
+
 CREATE EXTERNAL TABLE [etl_customer].[Patient]
 WITH (
 		LOCATION = 'etl_customer/Patient',

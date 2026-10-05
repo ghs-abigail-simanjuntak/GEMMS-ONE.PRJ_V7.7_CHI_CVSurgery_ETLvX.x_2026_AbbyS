@@ -1,5 +1,5 @@
 /********************************************************************************
-SCRIPT DEPENDENCIES: etl_dbo.Document_ASS, etl_dbo.Document_CALL, etl_dbo.Document_NOTE, etl_dbo.Document_EDM, etl_dbo.Document_ITS_RAD_Table, etl_dbo.Document_ITS_MTDD, etl_dbo.Document_RPT_Table
+SCRIPT DEPENDENCIES:
 ITEM TYPE: Document
 NOTES: Combines Document CETAS tables into etl_medical.Document 
 SCALLE:

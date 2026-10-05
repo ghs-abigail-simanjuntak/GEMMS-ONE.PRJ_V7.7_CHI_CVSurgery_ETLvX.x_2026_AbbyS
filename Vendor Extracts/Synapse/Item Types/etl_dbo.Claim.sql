@@ -1,53 +1,70 @@
 /********************************************************************************
-SCRIPT DEPENDENCIES: 
+SCRIPT DEPENDENCIES: files.CLAIM, files.CHARGE, files.CLAIMHISTORY, files.CLAIMREMITHISTORY, files.CLAIMINSURANCE, files.PATIENTACCOUNT, files.PATIENTDEMOGRAPHICS, files.GUARANTOR
 ITEM TYPE: Claim
-NOTES: There are duplicate rows in the data, check to see in the front end if those claims are listed twice
+NOTES: One row per claim episode (PatientID + INCIDENTNO), sourced from CLAIM.
+       CHARGE/CLAIMHISTORY/CLAIMREMITHISTORY/CLAIMINSURANCE are rolled up to that
+       same grain first, so joining them cannot multiply the claim row count.
 SCALE:
 ********************************************************************************/
- 
- -- DROP EXTERNAL TABLE etl_dbo.Claim
+
+-- DROP EXTERNAL TABLE etl_dbo.Claim
 CREATE EXTERNAL TABLE etl_dbo.Claim
 WITH (
     LOCATION = 'etl_dbo/Claim',
     DATA_SOURCE = [EtlExtractStorage],
     FILE_FORMAT = ParquetFileFormat
 )
-AS 
+AS
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    1 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
-    CONCAT(cl.[PatientID], '|CLAIM|', COALESCE(cl.[INCIDENTNO], ''), '|', COALESCE(cl.[CLAIMID], '')) AS [ExternalDataId],
+    CONCAT(cl.[PatientID], '|CLAIM|', COALESCE(NULLIF(cl.[INCIDENTNO], ''), ''), '|', COALESCE(NULLIF(cl.[CLAIMID], ''), '')) AS [ExternalDataId],
     '1' AS [ExternalDataVersion],
     1 AS [DisplayOrder],
     cl.[PatientID] AS [PatientExternalDataId],
-    COALESCE(NULLIF(cl.[ADMDATE], ''), NULLIF(cl.[INCDATE1], ''), NULLIF(cl.[SYMPTOMDATE], '')) AS [ClinicallyRelevantDttm],
+    COALESCE(NULLIF(cl.[ADMDATE], ''), NULLIF(cl.[INCDATE1], ''), NULLIF(cl.[SYMPTOMDATE], ''), '1900-01-01') AS [ClinicallyRelevantDttm],
     'Claim' AS [TypeCode],
     'Billing Claim' AS [TypeName],
     0 AS [IsInvalidated],
     NULL AS [InvalidatedDttm],
     NULL AS [InvalidatedByProviderExternalDataId],
-    NULL AS [ExternalDataCreatedDttm],
-    NULL AS [ExternalDataUpdatedDttm],
+    NULLIF(cl.[ADMDATE], '') AS [ExternalDataCreatedDttm],
+    NULLIF(chs.[LastRunDate], '') AS [ExternalDataUpdatedDttm],
     COALESCE(NULLIF(cl.[PSTATUS], ''), NULLIF(cl.[BILLFLAG], ''), 'Active') AS [Status],
-    CONCAT('Claim ', COALESCE(cl.[CLAIMID], cl.[INCIDENTNO])) AS [Title],
+    CONCAT('Claim ', COALESCE(NULLIF(chg.[ChargeClaimId], ''), NULLIF(chs.[LastSubmittedClaimId], ''), cl.[INCIDENTNO])) AS [Title],
     0 AS [IsSecure],
     NULL AS [VcoSetEntries],
-    NULL AS [ExtendedProperties],
+    CONVERT(VARCHAR(4000),
+        CONCAT(
+            '{"claimTableClaimId":"', COALESCE(REPLACE(CONVERT(VARCHAR(100), cl.[CLAIMID]), '"', '\"'), ''), '"',
+            ',"chargeCount":', COALESCE(CONVERT(VARCHAR(20), chg.[ChargeCount]), '0'),
+            ',"chargeClaimId":"', COALESCE(REPLACE(CONVERT(VARCHAR(100), chg.[ChargeClaimId]), '"', '\"'), ''), '"',
+            ',"claimHistoryRunCount":', COALESCE(CONVERT(VARCHAR(20), chs.[RunCount]), '0'),
+            ',"claimHistoryLastRunDate":"', COALESCE(CONVERT(VARCHAR(23), TRY_CAST(chs.[LastRunDate] AS datetime2), 121), ''), '"',
+            ',"claimHistoryLastSubmittedClaimId":"', COALESCE(REPLACE(CONVERT(VARCHAR(100), chs.[LastSubmittedClaimId]), '"', '\"'), ''), '"',
+            ',"claimHistoryProvider":"', COALESCE(REPLACE(CONVERT(VARCHAR(100), chs.[LastProvider]), '"', '\"'), ''), '"',
+            ',"remitCount":', COALESCE(CONVERT(VARCHAR(20), crh.[RemitCount]), '0'),
+            ',"payorClaimId":"', COALESCE(REPLACE(CONVERT(VARCHAR(100), crh.[PayorClaimId]), '"', '\"'), ''), '"',
+            ',"insuranceCount":', COALESCE(CONVERT(VARCHAR(20), cis.[InsuranceCount]), '0'),
+            ',"primaryInsuranceCode":"', COALESCE(REPLACE(CONVERT(VARCHAR(100), cis.[PrimaryInsuranceCode]), '"', '\"'), ''), '"',
+            '}'
+        )
+    ) AS [ExtendedProperties],
     NULL AS [ServiceDttm],
     NULLIF(cl.[ADMDATE], '') AS [RecordedDttm],
-    cl.[PatientID] AS [AccountExternalDataId],
-    cl.[CLAIMID] AS [ClaimNumber],
+    CONCAT('account_',pa.[PatientID]) AS [AccountExternalDataId],
+    COALESCE(NULLIF(chg.[ChargeClaimId], ''), NULLIF(chs.[LastSubmittedClaimId], '')) AS [ClaimNumber],
     cl.[FACCODE] AS [Location],
-    NULLIF(cl.[ADMDATE], '') AS [ClaimDttm],
-    NULL AS [LastUpdatedDttm],
-    NULLIF(cl.[DOCTORATT], '') AS [ServiceProviderExternalDataId],
+    COALESCE(NULLIF(cl.[ADMDATE], ''), NULLIF(cl.[INCDATE1], '')) AS [ClaimDttm],
+    NULLIF(chs.[LastRunDate], '') AS [LastUpdatedDttm],
+    NULL AS [ServiceProviderExternalDataId],
     NULL AS [PaidByInsuranceExternalDataId],
     NULL AS [RecordedByExternalDataId],
     NULL AS [LastUpdatedByExternalDataId],
-    NULLIF(cl.[DOCTORORD], '') AS [ClaimProviderExternalDataId],
-    NULL AS [TotalClaimWriteOffAmount],
-    NULL AS [TotalClaimInsuranceAmount],
+    NULL AS [ClaimProviderExternalDataId],
+    crh.[TotalWriteOff] AS [TotalClaimWriteOffAmount],
+    crh.[TotalPaid] AS [TotalClaimInsuranceAmount],
     NULL AS [EncounterExternalDataId],
     NULL AS [VisitExternalDataId],
     cl.[REMARK] AS [AdditionalClaimInformation],
@@ -55,8 +72,13 @@ SELECT
     NULL AS [AdmissionHour],
     NULL AS [AdmissionSource],
     cl.[ADMTYPE] AS [AdmissionType],
-    cl.[ASSIGN] AS [AlternateBenefitIndicator],
-    cl.[DOCTORATT] AS [AttendingPhysicianDesc],
+    -- CASE
+    --     WHEN NULLIF(LTRIM(RTRIM(cl.[ASSIGN])), '') IN ('Y', '1', 'Yes', 'YES', 'True', 'TRUE') THEN 1
+    --     WHEN NULLIF(LTRIM(RTRIM(cl.[ASSIGN])), '') IN ('N', '0', 'No', 'NO', 'False', 'FALSE') THEN 0
+    --     ELSE NULL
+    -- END AS [AlternateBenefitIndicator],
+    NULL AS [AlternateBenefitIndicator],
+    NULL AS [AttendingPhysicianDesc],
     NULL AS [BillingProviderAtypical],
     NULL AS [BillingProviderIdTypical],
     NULL AS [BillingProviderInfoPersonFirstName],
@@ -81,8 +103,14 @@ SELECT
     NULL AS [BillSubmissionSignatureText],
     cl.[BILLFLAG] AS [ClaimCodes],
     NULL AS [CoInsuranceDays],
-    cl.[ACCIDENT] AS [ConditionRelatedToAutoAccidentIndicator],
-    cl.[ACCIDENTSTATE] AS [ConditionRelatedToAutoAccidentStateIndicator],
+    -- CASE
+    --     WHEN NULLIF(LTRIM(RTRIM(cl.[ACCIDENT])), '') IN ('Y', '1', 'Yes', 'YES', 'True', 'TRUE') THEN 1
+    --     WHEN NULLIF(LTRIM(RTRIM(cl.[ACCIDENT])), '') IN ('N', '0', 'No', 'NO', 'False', 'FALSE') THEN 0
+    --     ELSE NULL
+    -- END 
+    NULL AS [ConditionRelatedToAutoAccidentIndicator],
+    -- cl.[ACCIDENTSTATE] AS [ConditionRelatedToAutoAccidentStateIndicator],
+    NULL AS [ConditionRelatedToAutoAccidentStateIndicator],
     NULL AS [ConditionRelatedToEmploymentIndicator],
     NULL AS [ConditionRelatedToOtherAccidentIndicator],
     NULL AS [CoveredDays],
@@ -116,7 +144,7 @@ SELECT
     NULL AS [NonCoveredDays],
     NULL AS [NonLabeledField],
     NULL AS [OtherDiagnosisCode],
-    NULL AS [OtherClaimId],
+    crh.[PayorClaimId] AS [OtherClaimId],
     NULL AS [OtherClaimDttm],
     NULL AS [OtherDxCodeA],
     NULL AS [OtherDxCodeB],
@@ -211,7 +239,7 @@ SELECT
     cl.[FACCODE] AS [ServiceFacilityName],
     NULL AS [StatementCoversPeriodFromDttm],
     NULL AS [StatementCoversPeriodToDttm],
-    NULL AS [TotalClaimCharges],
+    chg.[TotalClaimCharges] AS [TotalClaimCharges],
     NULL AS [TypeOfBill],
     NULL AS [Ub92UnlabeledField1],
     NULL AS [UnableToWorkFromDttm],
@@ -261,7 +289,7 @@ SELECT
     NULL AS [RenderingProviderName],
     NULL AS [ReservedForNucc2012],
     NULL AS [AttendingPhysicianFirstName],
-    cl.[DOCTORATT] AS [AttendingPhysicianId],
+    NULL AS [AttendingPhysicianId],
     NULL AS [AttendingPhysicianIdQual],
     NULL AS [AttendingPhysicianLastName],
     NULL AS [AttendingPhysicianNpi],
@@ -318,7 +346,7 @@ SELECT
     NULL AS [CodeValue81C],
     NULL AS [CodeValue81D],
     NULL AS [OperatingPhysicianFirstName],
-    cl.[DOCTOROP] AS [OperatingPhysicianId],
+    NULL AS [OperatingPhysicianId],
     NULL AS [OperatingPhysicianIdQual],
     NULL AS [OperatingPhysicianLastName],
     NULL AS [OperatingPhysicianNpi],
@@ -363,17 +391,98 @@ SELECT
     NULL AS [ResNucc2NubcRemarksB],
     NULL AS [ResNucc3NubcRemarksC],
     NULL AS [ResNucc4NubcRemarksD]
--- SELECT TOP(100)*
-FROM GEMMSCV.[files].[CLAIM] cl
-INNER JOIN GEMMSCV.[files].[PATIENTACCOUNT] pa
+-- SELECT TOP(100)* -- 40591
+FROM (
+    SELECT DISTINCT * FROM [files].[CLAIM]
+) cl
+INNER JOIN [files].[PATIENTACCOUNT] pa
     ON pa.[PatientID] = cl.[PatientID]
-LEFT JOIN GEMMSCV.[files].[PATIENTDEMOGRAPHICS] pd
+LEFT JOIN [files].[PATIENTDEMOGRAPHICS] pd
     ON pd.[PatientID] = cl.[PatientID]
-LEFT JOIN GEMMSCV.[files].[GUARANTOR] g
+LEFT JOIN [files].[GUARANTOR] g
     ON g.[PatientID] = cl.[PatientID]
+LEFT JOIN (
+    -- Charge totals per claim episode
+    SELECT
+        ch.[PatientID],
+        ch.[INCIDENTNO],
+        COUNT(*) AS [ChargeCount],
+        SUM(TRY_CAST(NULLIF(ch.[CHGAMOUNT], '') AS decimal(18, 2))) AS [TotalClaimCharges],
+        MAX(NULLIF(ch.[CLAIMID], '')) AS [ChargeClaimId]
+    FROM (
+        SELECT DISTINCT * FROM [files].[CHARGE]
+    ) ch
+    GROUP BY
+        ch.[PatientID],
+        ch.[INCIDENTNO]
+) chg
+    ON chg.[PatientID] = cl.[PatientID]
+   AND chg.[INCIDENTNO] = cl.[INCIDENTNO]
+LEFT JOIN (
+    -- Claim submission run history per claim episode
+    SELECT
+        chs.[PatientID],
+        chs.[INCIDENTNO],
+        COUNT(*) AS [RunCount],
+        MAX(NULLIF(chs.[RUNDATE], '')) AS [LastRunDate],
+        MAX(NULLIF(CONVERT(VARCHAR(100), chs.[CLAIMID]), '')) AS [LastSubmittedClaimId],
+        MAX(NULLIF(chs.[PROVID], '')) AS [LastProvider]
+    FROM (
+        SELECT DISTINCT * FROM [files].[CLAIMHISTORY]
+    ) chs
+    GROUP BY
+        chs.[PatientID],
+        chs.[INCIDENTNO]
+) chs
+    ON chs.[PatientID] = cl.[PatientID]
+   AND chs.[INCIDENTNO] = cl.[INCIDENTNO]
+LEFT JOIN (
+    -- Remit/payment totals per claim episode, bridged through CHARGE (CLAIMREMITHISTORY has no INCIDENTNO)
+    SELECT
+        ch.[PatientID],
+        ch.[INCIDENTNO],
+        COUNT(*) AS [RemitCount],
+        SUM(TRY_CAST(NULLIF(crh.[PAID], '') AS decimal(18, 2))) AS [TotalPaid],
+        SUM(TRY_CAST(NULLIF(crh.[ALLOWED], '') AS decimal(18, 2))) AS [TotalAllowed],
+        SUM(
+            COALESCE(TRY_CAST(NULLIF(crh.[REDUCTION1], '') AS decimal(18, 2)), 0) +
+            COALESCE(TRY_CAST(NULLIF(crh.[REDUCTION2], '') AS decimal(18, 2)), 0) +
+            COALESCE(TRY_CAST(NULLIF(crh.[REDUCTION3], '') AS decimal(18, 2)), 0)
+        ) AS [TotalWriteOff],
+        MAX(NULLIF(crh.[PAYORCLAIMID], '')) AS [PayorClaimId]
+    FROM (
+        SELECT DISTINCT * FROM [files].[CLAIMREMITHISTORY]
+    ) crh
+    INNER JOIN (
+        SELECT DISTINCT * FROM [files].[CHARGE]
+    ) ch
+        ON ch.[PatientID] = crh.[PatientID]
+       AND ch.[CHGID] = crh.[CHGID]
+    GROUP BY
+        ch.[PatientID],
+        ch.[INCIDENTNO]
+) crh
+    ON crh.[PatientID] = cl.[PatientID]
+   AND crh.[INCIDENTNO] = cl.[INCIDENTNO]
+LEFT JOIN (
+    -- Insurance coverage per claim episode
+    SELECT
+        ci.[PatientID],
+        ci.[INCIDENTNO],
+        COUNT(*) AS [InsuranceCount],
+        MIN(NULLIF(ci.[INSCODE], '')) AS [PrimaryInsuranceCode]
+    FROM (
+        SELECT DISTINCT * FROM [files].[CLAIMINSURANCE]
+    ) ci
+    GROUP BY
+        ci.[PatientID],
+        ci.[INCIDENTNO]
+) cis
+    ON cis.[PatientID] = cl.[PatientID]
+   AND cis.[INCIDENTNO] = cl.[INCIDENTNO]
 WHERE 1 = 1
 --Functional
 
 --Site specific
- 
+
 -- Testing (Remove this section before final storage of scripts in the Repo)

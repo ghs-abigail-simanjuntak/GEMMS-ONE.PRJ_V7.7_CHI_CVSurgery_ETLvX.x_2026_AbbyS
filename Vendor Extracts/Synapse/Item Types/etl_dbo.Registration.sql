@@ -15,13 +15,18 @@ WITH (
 AS 
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    1 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
     pa.[PatientID] AS [ExternalDataId],
     '1' AS [ExternalDataVersion],
     1 AS [DisplayOrder],
     pa.[PatientID] AS [PatientExternalDataId],
-    NULLIF(pa.[DOB], '') AS [ClinicallyRelevantDttm],
+    COALESCE(
+        TRY_CAST(pd.LASTVISIT AS datetime2),
+        TRY_CAST(pa.DOB AS datetime2),
+        TRY_CAST(pd.DECEASED AS datetime2),
+        CAST('1900-01-01' AS datetime2)
+    ) AS [ClinicallyRelevantDttm],
     0 AS [IsInvalidated],
     NULL AS [InvalidatedDttm],
     NULL AS [InvalidatedByProviderExternalDataId],

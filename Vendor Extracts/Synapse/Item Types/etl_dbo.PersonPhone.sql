@@ -13,6 +13,13 @@ WITH (
     FILE_FORMAT = ParquetFileFormat
 )
 AS 
+WITH provider_phone_base AS (
+    SELECT
+        p.[DOCTOR],
+        p.[PHONE]
+    FROM [files].[PROVIDERDOCTORCODEMASTER] p
+    WHERE NULLIF(LTRIM(RTRIM(COALESCE(p.[DOCTOR], ''))), '') IS NOT NULL
+)
 SELECT
 	NEWID() AS Id,
 	1 AS ItemSetId,
@@ -52,3 +59,24 @@ WHERE 1 = 1
 --Functional
 AND  NULLIF(LTRIM(RTRIM(COALESCE(pd.[EMERGENCYCONTACT], ''))), '') IS NOT NULL
 AND NULLIF(LTRIM(RTRIM(COALESCE(pd.[EMERGENCYPHONE], ''))), '') IS NOT NULL
+
+UNION ALL
+
+SELECT
+    NEWID() AS [Id],
+    1 AS [ItemSetId],
+    'CHIGEMMS1CV' AS [DataSourceCode],
+    CONCAT('PROVIDERPHONE|', prb.[DOCTOR], '|WORK|', prb.[PHONE]) AS [ExternalDataId],
+    CONCAT('PROVIDER|', prb.[DOCTOR]) AS [ItemExternalDataId],
+    'WORK' AS [Type],
+    CASE
+        WHEN LEN(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(prb.[PHONE], '-', ''), '/', ''), '(', ''), ')', ''), ' ', '')) = 10
+            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(prb.[PHONE], '-', ''), '/', ''), '(', ''), ')', ''), ' ', '') NOT LIKE '%[^0-9]%'
+            THEN STUFF(STUFF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(prb.[PHONE], '-', ''), '/', ''), '(', ''), ')', ''), ' ', ''), 4, 0, '-'), 8, 0, '-')
+        ELSE prb.[PHONE]
+    END AS [Number],
+    CAST(1 AS bit) AS [IsPrimary]
+FROM provider_phone_base prb
+WHERE 1 = 1
+-- Functional
+AND NULLIF(LTRIM(RTRIM(COALESCE(prb.[PHONE], ''))), '') IS NOT NULL

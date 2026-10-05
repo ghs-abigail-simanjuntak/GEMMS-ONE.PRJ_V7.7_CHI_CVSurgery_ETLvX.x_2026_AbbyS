@@ -6,8 +6,6 @@ ITEM TYPE: PatientAddress
 NOTES: 
 SCALE:
 ********************************************************************************/
-
-
 /*
 DROP EXTERNAL TABLE [etl_ctas].[PatientAddressCurrentVer]
 DROP EXTERNAL TABLE [customer].[PatientAddress]

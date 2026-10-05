@@ -1,13 +1,8 @@
 /********************************************************************************
 SCRIPT DEPENDENCIES: 
-etl_dbo.Allergy_OE, 
-etl_dbo.Allergy_ClassGenericIngredient, 
-etl_dbo.Allergy_CodedAllergies,
-etl_dbo.Allergy_Uncoded,
-etl_dbo.Allergy_AuditAllergies,
-etl_dbo.Allergy_NKA
+etl_dbo.Allergy
 ITEM TYPE: Allergy  
-NOTES: Check which CTAS scripts you have populated for Allegies! Might need to union all some more tables into this script, comment others out.
+NOTES:
 SCALE:
 ********************************************************************************/
 

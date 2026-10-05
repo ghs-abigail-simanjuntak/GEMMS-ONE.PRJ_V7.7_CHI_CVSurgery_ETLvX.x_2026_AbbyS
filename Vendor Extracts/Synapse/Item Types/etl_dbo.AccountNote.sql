@@ -6,6 +6,7 @@ SCALE:
 ********************************************************************************/
  
  -- DROP EXTERNAL TABLE etl_dbo.AccountNote
+
 CREATE EXTERNAL TABLE etl_dbo.AccountNote
 WITH (
     LOCATION = 'etl_dbo/AccountNote',
@@ -15,7 +16,7 @@ WITH (
 AS 
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    1 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
     CONCAT(cn.[PatientID], '|ACCNOTE|CHG|', COALESCE(cn.[CHGID], ''), '|', COALESCE(cn.[ENTERED], ''), '|', COALESCE(cn.[USERCODE], '')) AS [ExternalDataId],
     '1' AS [ExternalDataVersion],
@@ -58,7 +59,7 @@ UNION ALL
 
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    1 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
     CONCAT(col.[PatientID], '|ACCNOTE|COLL|', COALESCE(col.[MSGID], ''), '|', COALESCE(col.[MDATE], ''), '|', COALESCE(col.[USERCODE], '')) AS [ExternalDataId],
     '1' AS [ExternalDataVersion],

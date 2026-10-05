@@ -15,13 +15,13 @@ WITH (
 AS 
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    1 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
     CONCAT('account_',pa.[PatientID]) AS [ExternalDataId],
     '1' AS [ExternalDataVersion],
     1 AS [DisplayOrder],
     pa.[PatientID] AS [PatientExternalDataId],
-    pd.[LASTVISIT] AS [ClinicallyRelevantDttm],
+    COALESCE(pd.[LASTVISIT],pa.[DOB], '1900-01-01') AS [ClinicallyRelevantDttm],
     COALESCE(pd.[PTYPE], 'Patient Account') AS [TypeCode],
     COALESCE(pd.[PTYPE], 'Patient Account') AS [TypeName],
     NULL AS [IsInvalidated],

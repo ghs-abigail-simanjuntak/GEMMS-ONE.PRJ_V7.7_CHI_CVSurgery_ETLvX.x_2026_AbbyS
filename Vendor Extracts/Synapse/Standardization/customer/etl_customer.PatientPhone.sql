@@ -33,13 +33,13 @@ WHERE 1 = 1
 
 -----------------------------------------------------------------
 
-IF NOT EXISTS ( SELECT * FROM SYS.SCHEMAS WHERE NAME = 'customer')
-	EXEC('CREATE SCHEMA [customer]')
+IF NOT EXISTS ( SELECT * FROM SYS.SCHEMAS WHERE NAME = 'etl_customer')
+	EXEC('CREATE SCHEMA [etl_customer]')
 
---DROP EXTERNAL TABLE [customer].[PatientPhone]
-CREATE EXTERNAL TABLE [customer].[PatientPhone]
+--DROP EXTERNAL TABLE [etl_customer].[PatientPhone]
+CREATE EXTERNAL TABLE [etl_customer].[PatientPhone]
 WITH (
-		LOCATION = 'customer/PatientPhone',
+		LOCATION = 'etl_customer/PatientPhone',
 		DATA_SOURCE = [EtlExtractStorage],
 		FILE_FORMAT = ParquetFileFormat
 	)

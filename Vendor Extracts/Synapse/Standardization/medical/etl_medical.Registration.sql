@@ -6,8 +6,6 @@ NOTES:
 SCALE:
 ********************************************************************************/
 
-
-
 IF NOT EXISTS ( SELECT * FROM SYS.SCHEMAS WHERE NAME = 'etl_medical')
 	EXEC('CREATE SCHEMA [etl_medical]')
 

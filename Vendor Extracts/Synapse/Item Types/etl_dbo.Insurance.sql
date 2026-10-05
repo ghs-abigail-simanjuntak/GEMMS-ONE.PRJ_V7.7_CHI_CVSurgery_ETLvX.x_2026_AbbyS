@@ -19,8 +19,10 @@ SELECT
     'CHIGEMMS1CV' AS [DataSourceCode],
     CONCAT(i.[PatientID], '|', COALESCE(i.[INUM], ''), '|', COALESCE(i.[INSCODE], ''), '|', COALESCE(i.[POLICYNO], ''))  AS [ExternalDataId],
     i.[PatientId] AS [PatientExternalDataId],
-    NULL AS [PayorExternalDataId],
+    CONCAT('PAYOR|INS|', im.[CODE]) AS [PayorExternalDataId],
     im.[Name] AS [Name],
+    NULLIF(i.[ENTERED], '') AS [ExternalDataCreatedDttm],
+    NULLIF(i.[ENTERED], '') AS [ExternalDataUpdatedDttm],
     CONVERT(VARCHAR(8000),
         JSON_MODIFY(
         JSON_MODIFY(
