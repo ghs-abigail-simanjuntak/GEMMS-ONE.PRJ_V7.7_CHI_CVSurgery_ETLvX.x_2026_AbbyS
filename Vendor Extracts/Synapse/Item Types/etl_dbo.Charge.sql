@@ -5,7 +5,7 @@ NOTES: Direct charge-line reconstruction from CHARGE, linked to Account by Patie
 SCALE:
 ********************************************************************************/
  
- -- DROP EXTERNAL TABLE etl_dbo.Charge
+DROP EXTERNAL TABLE etl_dbo.Charge
 CREATE EXTERNAL TABLE etl_dbo.Charge
 WITH (
     LOCATION = 'etl_dbo/Charge',

@@ -1,5 +1,5 @@
 /********************************************************************************
-SCRIPT DEPENDENCIES:
+SCRIPT DEPENDENCIES: etl_dbo.DocumentNonDiscrete, etl_dbo.DocumentNonDiscreteManual
 ITEM TYPE: DocumentNonDiscrete
 NOTES: Combines DocumentNonDiscrete helper CETAS tables into medical.DocumentNonDiscrete
 SCALE:
@@ -9,7 +9,7 @@ SCALE:
 IF NOT EXISTS ( SELECT * FROM SYS.SCHEMAS WHERE NAME = 'etl_medical')
 	EXEC('CREATE SCHEMA [etl_medical]')
 
---DROP EXTERNAL TABLE [etl_medical].[DocumentNonDiscrete]
+DROP EXTERNAL TABLE [etl_medical].[DocumentNonDiscrete]
 CREATE EXTERNAL TABLE [etl_medical].[DocumentNonDiscrete]
 WITH (
 		LOCATION = 'etl_medical/DocumentNonDiscrete',

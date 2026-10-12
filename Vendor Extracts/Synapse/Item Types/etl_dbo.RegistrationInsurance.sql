@@ -4,8 +4,8 @@ ITEM TYPE: RegistrationInsurance
 NOTES: Child registration insurance rows linked to Registration by PatientID and version 1.
 SCALE:
 ********************************************************************************/
- 
- -- DROP EXTERNAL TABLE etl_dbo.RegistrationInsurance
+
+DROP EXTERNAL TABLE etl_dbo.RegistrationInsurance
 CREATE EXTERNAL TABLE etl_dbo.RegistrationInsurance
 WITH (
     LOCATION = 'etl_dbo/RegistrationInsurance',
@@ -227,7 +227,7 @@ LEFT JOIN [files].[INSURANCEMASTER] AS IM
     ON i.[INSCODE] = im.[CODE]
 WHERE 1 = 1
 --Functional
-
+--
 --Site specific
 
 -- Testing (Remove this section before final storage of scripts in the Repo)

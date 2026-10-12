@@ -5,7 +5,7 @@ NOTES:
 SCALE:
 ********************************************************************************/
  
- -- DROP EXTERNAL TABLE [etl_dbo].[Transaction]
+DROP EXTERNAL TABLE [etl_dbo].[Transaction]
 CREATE EXTERNAL TABLE [etl_dbo].[Transaction]
 WITH (
     LOCATION = 'etl_dbo/Transaction',
@@ -13,6 +13,7 @@ WITH (
     FILE_FORMAT = ParquetFileFormat
 )
 AS 
+-- select top(100)* from [etl_dbo].[Transaction] where typecode = 'payment'
 SELECT
     NEWID() AS [Id],
     1 AS [ItemSetId],
@@ -51,21 +52,25 @@ SELECT
     NULLIF(p.[ENTRYDATE], '') AS [EnteredDttm],
     NULLIF(p.[ENTRYDATE], '') AS [LastUpdatedDttm],
     NULLIF(p.[XACDATE], '') AS [TransactionPostDttm],
-    CASE
-        WHEN p.[DC] = 'CW' THEN -TRY_CAST(NULLIF(p.[XACAMOUNT], '') AS decimal(18, 2))
-        ELSE TRY_CAST(NULLIF(p.[XACAMOUNT], '') AS decimal(18, 2))
-    END AS [Amount],
+    -ABS(TRY_CAST(NULLIF(p.[XACAMOUNT], '') AS decimal(18,2))) AS [Amount],
     p.[PLOCATION] AS [Department],
     NULL AS [BatchNumber],
     p.[PLOCATION] AS [Location],
     p.[CHECKID] AS [CheckNumber],
+    -- CASE
+    --     WHEN pc.[ACTIVE] = 'N'  THEN 0
+    --     WHEN pc.[REFUNDFLAG] = 'Y'  THEN 4
+    --     WHEN pc.[PAYFLAG] IN ('1', '2', '3') THEN 6 -- Insurance Payment
+    --     WHEN pc.[PAYFLAG] IN ('G', 'O') THEN 5 -- Patient Payment
+    --     WHEN pc.[PAYFLAG] IN ('C', 'P') THEN 2 -- Adjustment
+    --     ELSE 0
+    -- END AS [WellKnownTransactionType],
     CASE
-        WHEN pc.[ACTIVE] = 'N'  THEN 0
         WHEN pc.[REFUNDFLAG] = 'Y'  THEN 4
         WHEN pc.[PAYFLAG] IN ('1', '2', '3') THEN 6 -- Insurance Payment
         WHEN pc.[PAYFLAG] IN ('G', 'O') THEN 5 -- Patient Payment
         WHEN pc.[PAYFLAG] IN ('C', 'P') THEN 2 -- Adjustment
-        ELSE 0
+        ELSE 6
     END AS [WellKnownTransactionType],
     NULL AS [EncounterExternalDataId],
     NULL AS [VisitExternalDataId],

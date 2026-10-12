@@ -269,7 +269,7 @@
 	);
 	DELETE FROM [etl_medical].[documentNonDiscrete] WHERE DataSourceCode='CHIGEMMS1CV';
 	INSERT INTO etl_medical.[documentNonDiscrete]
-	SELECT * FROM etl_medical.CHIGEMMS1CV_DocumentNonDiscrete
+	SELECT count(*) FROM etl_medical.CHIGEMMS1CV_DocumentNonDiscrete
 
 -- Encounter
 
@@ -352,22 +352,6 @@
 	INSERT INTO etl_medical.[problem]
 	SELECT * FROM etl_medical.CHIGEMMS1CV_Problem
 
--- Procedure
-
-	SET QUOTED_IDENTIFIER ON;
-	drop TABLE [etl_medical].[CHIGEMMS1CV_Procedure];
-	COPY INTO [etl_medical].[CHIGEMMS1CV_Procedure]
-	FROM 'https://ghsaetlvcoimps.dfs.core.windows.net/aetl/chi/chigemms1/extracts/etl/etl_medical/Procedure/*.parquet'
-	WITH
-	(
-		FILE_FORMAT = [ParquetFileFormat]
-		,CREDENTIAL = (IDENTITY = 'Managed Identity')
-		,AUTO_CREATE_TABLE = 'ON'
-	);
-	DELETE FROM [etl_medical].[procedure] WHERE DataSourceCode='CHIGEMMS1CV';
-	INSERT INTO etl_medical.[procedure]
-	SELECT * FROM etl_medical.CHIGEMMS1CV_Procedure
-
 -- Statement
 
 	SET QUOTED_IDENTIFIER ON;
@@ -383,7 +367,7 @@
 	DELETE FROM [etl_medical].[statement] WHERE DataSourceCode='CHIGEMMS1CV';
 	INSERT INTO etl_medical.[statement]
 	SELECT * FROM etl_medical.CHIGEMMS1CV_Statement
-
+	-- select count(*) from etl_medical.statement where DataSourceCode='CHIGEMMS1CV'
 -- Transaction
 
 	SET QUOTED_IDENTIFIER ON;
@@ -495,8 +479,33 @@
 	DELETE FROM [etl_medical].[RegistrationEmail] WHERE DataSourceCode='CHIGEMMS1CV';
 	INSERT INTO etl_medical.[RegistrationEmail] SELECT * FROM etl_medical.CHIGEMMS1CV_RegistrationEmail 
 
-
-
+--RegistrationInsurance
+	SET QUOTED_IDENTIFIER ON;
+	TRUNCATE TABLE [etl_medical].[CHIGEMMS1CV_RegistrationInsurance];
+	COPY INTO [etl_medical].[CHIGEMMS1CV_RegistrationInsurance]
+	FROM 'https://ghsaetlvcoimps.dfs.core.windows.net/aetl/chi/chigemms1/extracts/etl/etl_medical/RegistrationInsurance/*.parquet'
+	WITH
+	(
+		FILE_FORMAT = [ParquetFileFormat]
+		,CREDENTIAL = (IDENTITY = 'Managed Identity')
+		,AUTO_CREATE_TABLE = 'ON'
+	);
+	DELETE FROM [etl_medical].[RegistrationInsurance] WHERE DataSourceCode='CHIGEMMS1CV';
+	INSERT INTO etl_medical.[RegistrationInsurance] SELECT * FROM etl_medical.CHIGEMMS1CV_RegistrationInsurance 
+-- select count(*) from etl_medical.RegistrationInsurance where DataSourceCode='CHIGEMMS1CV'
+--RegistrationContact
+	SET QUOTED_IDENTIFIER ON;
+	TRUNCATE TABLE [etl_medical].[CHIGEMMS1CV_RegistrationContact];
+	COPY INTO [etl_medical].[CHIGEMMS1CV_RegistrationContact]
+	FROM 'https://ghsaetlvcoimps.dfs.core.windows.net/aetl/chi/chigemms1/extracts/etl/etl_medical/RegistrationContact/*.parquet'
+	WITH
+	(
+		FILE_FORMAT = [ParquetFileFormat]
+		,CREDENTIAL = (IDENTITY = 'Managed Identity')
+		,AUTO_CREATE_TABLE = 'ON'
+	);
+	DELETE FROM [etl_medical].[RegistrationContact] WHERE DataSourceCode='CHIGEMMS1CV';
+	INSERT INTO etl_medical.[RegistrationContact] SELECT * FROM etl_medical.CHIGEMMS1CV_RegistrationContact 
 
 --RegistrationIdentifier
 	SET QUOTED_IDENTIFIER ON;
@@ -512,7 +521,19 @@
 	DELETE FROM [etl_medical].[RegistrationIdentifier] WHERE DataSourceCode='CHIGEMMS1CV';
 	INSERT INTO etl_medical.[RegistrationIdentifier] SELECT * FROM etl_medical.CHIGEMMS1CV_RegistrationIdentifier 
 
-
+--RegistrationPhone
+	SET QUOTED_IDENTIFIER ON;
+	DROP TABLE [etl_medical].[CHIGEMMS1CV_RegistrationPhone];
+	COPY INTO [etl_medical].[CHIGEMMS1CV_RegistrationPhone]
+	FROM 'https://ghsaetlvcoimps.dfs.core.windows.net/aetl/chi/chigemms1/extracts/etl/etl_medical/RegistrationPhone/*.parquet'
+	WITH
+	(
+		FILE_FORMAT = [ParquetFileFormat]
+		,CREDENTIAL = (IDENTITY = 'Managed Identity')
+		,AUTO_CREATE_TABLE = 'ON'
+	);
+	DELETE FROM [etl_medical].[RegistrationPhone] WHERE DataSourceCode='CHIGEMMS1CV';
+	INSERT INTO etl_medical.[RegistrationPhone] SELECT * FROM etl_medical.CHIGEMMS1CV_RegistrationPhone 
 
 
 --Result

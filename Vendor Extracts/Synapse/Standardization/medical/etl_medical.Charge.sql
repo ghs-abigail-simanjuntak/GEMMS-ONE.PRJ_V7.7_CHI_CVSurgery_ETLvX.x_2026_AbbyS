@@ -1,7 +1,7 @@
 IF NOT EXISTS ( SELECT * FROM SYS.SCHEMAS WHERE NAME = 'etl_medical')
 	EXEC('CREATE SCHEMA [etl_medical]')
-
-	--DROP EXTERNAL TABLE etl_medical.Charge
+-- select count(*) from etl_medical.charge
+DROP EXTERNAL TABLE etl_medical.Charge
 CREATE EXTERNAL TABLE etl_medical.Charge
 WITH (
 		LOCATION = 'etl_medical/Charge',

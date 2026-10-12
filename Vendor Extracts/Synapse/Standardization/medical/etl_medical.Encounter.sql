@@ -7,8 +7,8 @@ SCALE:
 
 IF NOT EXISTS ( SELECT * FROM SYS.SCHEMAS WHERE NAME = 'etl_medical')
 	EXEC('CREATE SCHEMA [etl_medical]')
-
---DROP EXTERNAL TABLE [etl_medical].[Encounter]
+-- select count(*) from etl_medical.encounter
+DROP EXTERNAL TABLE [etl_medical].[Encounter]
 CREATE EXTERNAL TABLE [etl_medical].[Encounter]
 WITH (
 		LOCATION = 'etl_medical/Encounter',

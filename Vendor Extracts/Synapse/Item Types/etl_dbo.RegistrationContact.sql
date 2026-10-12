@@ -15,7 +15,7 @@ WITH (
 AS 
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    1 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
     CONCAT(pa.[PatientID], '|CONTACT|EMERGENCY') AS [ExternalDataId],
     pa.[PatientID] AS [ItemExternalDataId],
@@ -38,7 +38,7 @@ UNION ALL
 
 SELECT
     NEWID() AS [Id],
-    NULL AS [ItemSetId],
+    1 AS [ItemSetId],
     'CHIGEMMS1CV' AS [DataSourceCode],
     CONCAT(pa.[PatientID], '|CONTACT|GUARANTOR') AS [ExternalDataId],
     pa.[PatientID] AS [ItemExternalDataId],

@@ -95,7 +95,7 @@ WITH problem_base AS (
 SELECT
     NEWID() AS [Id]
    ,1 AS [ItemSetId]
-   ,67 AS [DataSourceCode]
+   ,'CHIGEMMS1CV' AS [DataSourceCode]
    ,CASE
         WHEN pb.ProblemMultiplicity > 1 THEN CAST(CONCAT(LEFT(pb.BaseExternalDataId, 188), '_', CAST(pb.ProblemSequence AS varchar(10))) AS varchar(200))
         ELSE pb.BaseExternalDataId

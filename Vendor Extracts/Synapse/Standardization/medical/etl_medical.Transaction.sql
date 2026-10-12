@@ -1,7 +1,7 @@
 IF NOT EXISTS ( SELECT * FROM SYS.SCHEMAS WHERE NAME = 'etl_medical')
 	EXEC('CREATE SCHEMA [etl_medical]')
 
--- DROP EXTERNAL TABLE etl_medical.[Transaction]
+DROP EXTERNAL TABLE etl_medical.[Transaction]
 CREATE EXTERNAL TABLE etl_medical.[Transaction]
 WITH (
 		LOCATION = 'etl_medical/Transaction',
