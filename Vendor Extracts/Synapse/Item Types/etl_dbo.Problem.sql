@@ -13,7 +13,7 @@ WITH
     DATA_SOURCE = [EtlExtractStorage],
     FILE_FORMAT = ParquetFileFormat
 )
-AS
+AS 
 WITH problem_base AS (
     SELECT
         pl.*,
